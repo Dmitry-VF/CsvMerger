@@ -15,22 +15,18 @@ if (!Directory.Exists(input))
 
 var files = Directory.EnumerateFiles(input, "*.*", SearchOption.TopDirectoryOnly)
     .Where(s => s.EndsWith(".csv") || s.StartsWith("J"));
-var mergedCollection = new List<string[]>();
+
+var records = new List<Dictionary<string, string>>();
 
 foreach (var file in files)
 {
     string text = File.ReadAllText(file);
-    if (Path.GetFileName(file).Contains(".bak")) continue;
 
     Console.WriteLine($"Checking {Path.GetFileName(file)}");
 
     var csvEntries = ReadCSV(file);
-    var result = new List<string[]>();
 
-    var headers = csvEntries[1].ToList();
-    headers.Add("FileName");
-
-    result[0] = headers.ToArray();
+    var headers = csvEntries[1];
 
     for (var i = 2; i < csvEntries.Count; i++) //Ignore first row and headers entry, so i = 2
     {
@@ -38,28 +34,83 @@ foreach (var file in files)
 
         if (entry is null) continue;
 
-        var rowArray = entry.ToList();
+        var recs = new List<Dictionary<string, string>>();
+        var headerNumber = 0;
 
-        rowArray.Add(file); //Add cell value with current file name
+        foreach (var item in entry)
+        {
+            if (headerNumber > headers.Length) continue;
 
-        result[i - 1] = rowArray.ToArray();
+            var d = new Dictionary<string, string>();
+            d.Add(!string.IsNullOrEmpty(headers[headerNumber]) ? headers[headerNumber] : String.Empty, item);
+            recs.Add(d);
+            headerNumber++;
+        }
+
+        recs.Add(new Dictionary<string, string> { { "FileName", Path.GetFileNameWithoutExtension(file) } }); //Add cell value with current file name
+
+        records.AddRange(recs);
     }
-
-    mergedCollection.AddRange(result);
 }
 
 var resultFileName = $"MaterialList{DateTime.Now.ToString("yyMMdd")}.csv";
 
-using (var f = File.CreateText(Path.Combine(input, resultFileName)))
-{
-    f.NewLine = "\n";
-    foreach (var entry in mergedCollection)
-    {
-        if (entry is null) continue;
 
-        f.WriteLine(string.Join(",", entry));
+using (var writer = new StreamWriter(Path.Combine(input, resultFileName)))
+using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+{
+    
+    foreach (var record in records)
+    {
+        csv.WriteHeader(record.Keys);
+        //foreach (var dic in record)
+        //{
+        //    var key = dic.Key;
+            
+        //    if (!csv.HeaderRecord.Contains(key) || csv.HeaderRecord.Length == 0 )
+        //    {
+        //        csv.WriteHeader(key);
+        //    }
+        // }
     }
+
+    //var hasHeaderBeenWritten = false;
+    //foreach (var row in records)
+    //{
+    //    if (!hasHeaderBeenWritten)
+    //    {
+    //        foreach (var pair in row)
+    //        {
+
+    //            csv.WriteField(pair.Key);
+    //        }
+
+    //        hasHeaderBeenWritten = true;
+
+    //        csv.NextRecord();
+    //    }
+
+    //    foreach (var pair in row)
+    //    {
+    //        csv.WriteField(pair.Value);
+    //    }
+
+    //    csv.NextRecord();
+
+
+    writer.WriteLine(csv);
 }
+
+//using (var f = File.CreateText(Path.Combine(input, resultFileName)))
+//{
+//    f.NewLine = "\n";
+//    foreach (var entry in mergedCollection)
+//    {
+//        if (entry is null) continue;
+
+//        f.WriteLine(string.Join(",", entry));
+//    }
+//}
 
 Console.WriteLine("OK");
 
