@@ -53,6 +53,7 @@ foreach (var file in files)
     }
 }
 
+var finalHeaders = CollectUniqueKeys(records);
 var resultFileName = $"MaterialList{DateTime.Now.ToString("yyMMdd")}.csv";
 
 
@@ -62,7 +63,7 @@ using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
     
     foreach (var record in records)
     {
-        csv.WriteHeader(record.Keys);
+        
         //foreach (var dic in record)
         //{
         //    var key = dic.Key;
@@ -113,6 +114,24 @@ using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
 //}
 
 Console.WriteLine("OK");
+
+List<string> CollectUniqueKeys(List<Dictionary<string, string>> keyValuePairs)
+{
+    var result = new List<string>();
+
+    foreach(var keyValue in keyValuePairs)
+    {
+        foreach(var key in keyValue.Keys)
+        {
+            if(!result.Contains(key))
+            {
+                result.Add(key);
+            }
+        }
+    }
+
+    return result;
+}
 
 List<string[]> ReadCSV(string absolutePath)
 {
